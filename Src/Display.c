@@ -44,7 +44,7 @@ void Display_Data(uint8_t *data,uint32_t length){
 
 }
 
-void Display_Init(void){
+void Display_Init(uint8_t value){
 
 	PIN_INIT();
 
@@ -64,7 +64,7 @@ void Display_Init(void){
 	Send_Command(SSD1306_SETHIGHCOLUMN);
 	Send_Command(SSD1306_SETSTARTLINE);
 	Send_Command(SSD1306_SETCONTRAST);
-	Send_Command(0xFF);
+	Send_Command(value);
 	Send_Command(SSD1306_SEGREMAP);
 	Send_Command(SSD1306_NORMALDISPLAY);
 	Send_Command(SSD1306_SETMULTIPLEX);
@@ -142,3 +142,5 @@ void reset(void){
 void set(void){
 	GPIOA_ODR |= (1U << 9);
 }
+
+

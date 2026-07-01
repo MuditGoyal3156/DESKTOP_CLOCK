@@ -7,7 +7,6 @@ uint8_t FRAME_BUFFER[FB_SIZE]={0};
 void set_pixel(int x,int y, bool state){
 
 	int pos = FB_WIDTH*(y/8)+ x;
-
 	if (state) {
 		FRAME_BUFFER[pos] |= (1 << (y % 8));   // Turn pixel ON
 	} else {
@@ -61,13 +60,19 @@ void draw_rectangle(int x,int y, int width,int height)
 void draw_text(int x, int y, int size, char *text){
 	const uint8_t* font;
 	const uint8_t* drawChar;
-
 	int runningX = x;
 	int runningY = y;
-
 	int target;
 
-	font = CGA16;
+	switch(size){
+	case 8:
+		font = CGA8;
+		break;
+	case 16:
+		font = CGA16;
+		break;
+	}
+
 //For wrapping text
 
 	for(int i =0;i<strlen(text);i++){

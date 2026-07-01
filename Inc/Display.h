@@ -16,7 +16,7 @@ void delay(uint16_t time);
 void PIN_INIT(void);
 void Send_Command(uint8_t command);
 void Display_Data(uint8_t *data,uint32_t length);
-void Display_Init(void);
+void Display_Init(uint8_t value);
 void Display_Update(void);
 void Display_StopScroll(void);
 void set_contrast(uint8_t value);

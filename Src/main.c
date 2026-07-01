@@ -17,6 +17,7 @@
 extern uint8_t FRAME_BUFFER[FB_SIZE];
 
 DHT_DATA sensor;
+
 char temp_str[32];
 char pressure_str[32];
 uint8_t count = 0;
@@ -29,9 +30,10 @@ uint32_t p_pa = 0;
 uint32_t p_int = 0;
 uint32_t p_dec = 0;
 
-uint8_t contrast = 0;
-uint8_t navigation = 0;
-uint8_t old_navigation = 255;
+
+volatile uint8_t contrast = 0;
+volatile uint8_t navigation = 0;
+volatile uint8_t old_navigation = 255;
 void SysTick_Callback(void);
 
 int main(void)
@@ -40,7 +42,7 @@ int main(void)
     SPI1_GPIO_INIT();
     SPI_Master_INIT();
     SPI_DMA_INIT();
-    Display_Init();
+    Display_Init(0xFF);
 	I2C_INIT();
 	I2C_INTERRUPT_EN();
 	RTC_INIT();
@@ -50,71 +52,94 @@ int main(void)
 	I2C_ENABLE();
 	if(BMP280_Init()){
 	    printf("BMP280 Sensor OK\r\n");
-		draw_text(0,16,16,"BMP: OK ");
-		Display_Update();
-		for(int i = 0; i< 2000;i++);
 	}else{
-	    printf("BMP280 Sensor NOT FOUND\r\n");
-		draw_text(0,16,16,"BMP:ERR");
-		Display_Update();
-		for(int i = 0; i< 2000;i++);
-		while(1);
+
+		while(1){
+			printf("BMP280 Sensor NOT FOUND\r\n");
+			 for(int i = 0; i< 20000;i++);
+		}
 	}
 
 	int32_t temp;
 	uint32_t press;
+	memset(FRAME_BUFFER, 0, FB_SIZE);
 	while(1)
 	{
 		if(contrast == 0){
-			memset(FRAME_BUFFER, 0, FB_SIZE);
+
 			switch(navigation)
 			{
 				case 0:
-					draw_text(0,16,16,"HOME");
+			        if(count % 2 == 0)
+			        {
+			            if(sensor_select == 0)
+			            {
+			                DHT22_DATA(&sensor);
+			                GET_DATE(&Date);
+			                GET_TIME(&Time);
+			            }
+			            else
+			            {
+			                GET_TIME(&Time);
+
+			                temp  = BMP280_ReadTemperature();
+			                press = BMP280_ReadPressure();
+
+			                t_int = temp / 100;
+			                t_dec = temp % 100;
+
+			                p_pa  = press / 256;
+			                p_int = p_pa / 100;
+			                p_dec = p_pa % 100;
+
+			                sprintf(temp_str,"Temperature: %ld.%02ld C",t_int,t_dec);
+			                sprintf(pressure_str,"Pressure: %ld.%02ld hPa",p_int,p_dec);
+			            }
+			        }
+				    char line1[24];
+				    char line2[24];
+				    char line3[24];
+				    char line4[24];
+
+				    sprintf(line1,"Date: %02d/%02d/%02d", Date.Date, Date.Month, Date.Year);
+				    sprintf(line2,"Time: %02d:%02d", Time.Hours, Time.Minutes);
+				    sprintf(line3,"Temp: %ld.%02ldC",t_int,t_dec);
+				    sprintf(line4,"Hum:  %d.%d %%", sensor.humidity/10,sensor.humidity%10);
+				    draw_text(48,0,8,"HOME");
+				    draw_text(0,16,8,line1);
+				    draw_text(0,28,8,line2);
+				    draw_text(0,40,8,line3);
+				    draw_text(0,52,8,line4);
 				    break;
 
 				case 1:
-				   draw_text(0,16,16,"ALARM");
+
+				   draw_text(44,0,8,"ALARM");
 				   break;
 
 				case 2:
-				   draw_text(0,16,16,"TIMER");
+				   draw_text(44,0,8,"TIMER");
+
 				   break;
 			}
 			Display_Update();
+			for(int i = 0; i< 20000;i++);
+			memset(FRAME_BUFFER, 0, FB_SIZE);
 
-	        if(count % 2 == 0)
-	        {
-	            if(sensor_select == 0)
-	            {
-	                DHT22_DATA(&sensor);
-	                GET_DATE(&Date);
-	                GET_TIME(&Time);
-	            }
-	            else
-	            {
-	                GET_TIME(&Time);
 
-	                temp  = BMP280_ReadTemperature();
-	                press = BMP280_ReadPressure();
-
-	                t_int = temp / 100;
-	                t_dec = temp % 100;
-
-	                p_pa  = press / 256;
-	                p_int = p_pa / 100;
-	                p_dec = p_pa % 100;
-
-	                sprintf(temp_str,"Temperature: %ld.%02ld C",t_int,t_dec);
-	                sprintf(pressure_str,"Pressure: %ld.%02ld hPa",p_int,p_dec);
-	            }
-	        }
 		}else{
 	    	ADC_START();
 	        uint8_t adc = ADC_value();
 	        ADC_STOP();
+	        char line[24];
+	        memset(FRAME_BUFFER, 0, FB_SIZE);
+	        draw_text(0,0,8,"CONTRAST");
+	        sprintf(line,"Value: %d", adc);
+	        draw_text(0,16,8,line);
 	        set_contrast(adc);
-
+	        Display_Update();
+	        for(int i = 0; i< 2000;i++);
+	        memset(FRAME_BUFFER, 0, FB_SIZE);
 		}
 	}
 }
@@ -205,6 +230,6 @@ void EXTI0_IRQHandler(void){
         navigation = ( navigation +1 ) % 3;
 
         // Simple debounce delay
-        for(int i = 0; i< 300000;i++); //debounce
+        for(int i = 0; i< 250000;i++); //debounce
     }
 }
